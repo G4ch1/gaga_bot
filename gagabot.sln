@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32901.215
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gaga_bot", "gaga_botUpData\gaga_bot.csproj", "{46E5A8DD-814E-45F9-AC71-316868F80571}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSlashBot", "TestSlashBot\TestSlashBot.csproj", "{4DA186FD-BB3E-4AD1-AC48-9A84B834858B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{46E5A8DD-814E-45F9-AC71-316868F80571}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46E5A8DD-814E-45F9-AC71-316868F80571}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46E5A8DD-814E-45F9-AC71-316868F80571}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46E5A8DD-814E-45F9-AC71-316868F80571}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4DA186FD-BB3E-4AD1-AC48-9A84B834858B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DA186FD-BB3E-4AD1-AC48-9A84B834858B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DA186FD-BB3E-4AD1-AC48-9A84B834858B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DA186FD-BB3E-4AD1-AC48-9A84B834858B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {37CD2881-E5DF-4DDD-8144-BF2B898031F2}
+	EndGlobalSection
+EndGlobal
