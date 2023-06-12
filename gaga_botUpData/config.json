@@ -1,13 +1,13 @@
 ﻿{
   "version": "1.0",
-  "token": "NzgzMzU4Njc5MTE3NDYzNTYz.GuAXoY.iHB39_3HCqyv0LU7kzS9X1Mw2slCCJm1FYl8Z8",
+  "token": "MTAxNTMyODU0OTA0NzExMTc0MA.GRyF63.RfPL82H0jOibV73uB--1P8MeDzcOUBUcOiMcII",
   "serverId": "338331952732045343",
-  "CLIENT SECRET":  "Fg-Nx5OrFtl53is8bNmN1mrhJ64aVQb6",
+  "CLIENT SECRET": "Fg-Nx5OrFtl53is8bNmN1mrhJ64aVQb6",
 
   "prefixes": [ "." ],
   "join_message": "Салам алейкум :heart:",
 
   "currently": "playing|listening|watching|streaming",
-  "playing_status": "Дрочу слонам",
+  "playing_status": "Тут должен быть статус",
   "status": "online|dnd|idle|offline"
 }

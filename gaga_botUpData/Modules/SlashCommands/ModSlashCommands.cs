@@ -1,244 +1,461 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using System.Collections.Generic;
+
+using System;
+using System.Data;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 using gaga_bot.Attributes;
-using Sentry;
+using Microsoft.Extensions.Configuration;
+using static LibraryAttributes.EnumValues;
 
 namespace gaga_bot.Modules.SlashCommands
 {
     public class ModSlashCommands : InteractionModuleBase<SocketInteractionContext>
     {
-        // можно получить с помощью внедрения свойств, общедоступные свойства с общедоступными сеттерами будут установлены поставщиком услуг
-        public InteractionService commands { get; set; }
-        private CommandHandler _handler;
+        // можно получить с помощью внедрения свойств, общедоступные свойства с общедоступными сеттерами будут установлены пакетами зависимостей
+        public InteractionService _commands { get; set; }
         private readonly DiscordSocketClient _client;
-
-        public UserBan userBan = new UserBan();
-        public UserWarn userWarn = new UserWarn();
-        public UserMute userMute = new UserMute();
-
+        private readonly IConfiguration _config;
 
         // внедрение конструктора также является допустимым способом доступа к зависимостям
         public ModSlashCommands(DiscordSocketClient client, CommandHandler handler)
         {
-            _handler = handler;
+            var _builder = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile(path: "config.json");
+
+            // build the configuration and assign to _config          
+            _config = _builder.Build();
+
             _client = client;
-
-
-
             //_client.JoinedGuild += UserJoinAsync;
         }
 
-       
-
-
+        [RequireOwner]
         [EnabledInDm(true)]
-        [SlashCommand("ban", "бан блять")]
-        [DefaultMemberPermissions(GuildPermission.BanMembers)]
-        public async Task BanUser(SocketGuildUser user, string reason, string time)
+        [RequireRole("Модератор")]
+        [SlashCommand("ban", "Забанить")]
+        public async Task BanUser(SocketGuildUser user, string reason, TimeEnum timeEnum, int time)
         {
-            //ulong guildRole = 1015567150536204339;
-            await user.AddRoleAsync((ulong)StaticVariables.banRoles);
-
-            userBan.reason = reason;
-            userBan.userID = user.Id.ToString();
-            userBan.time = time;
-
-            if (userMute.time != null)
-                await Requests.RequestsBan(userBan);
-
-            ITextChannel channel = Context.Client.GetChannel((ulong)StaticVariables.logChanel) as ITextChannel;
-            var EmbedBuilderLog = new EmbedBuilder()
-                .WithDescription($"{user.Mention} был забанен \n**Причина** {reason}\n**Модератором** {Context.User.Mention}")
-                .WithFooter(footer =>
+            // Проверяем, является ли пользователь ботом
+            if (user.IsBot)
+            {
+                await Task.CompletedTask;
+            }
+            try
+            {
+                if (user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["banRoles"]))))
                 {
-                    footer
-                    .WithText("User ban log")
-                    .WithIconUrl(Context.User.GetAvatarUrl());
-                });
-            Embed embedLog = EmbedBuilderLog.Build();
-            await channel.SendMessageAsync(embed:embedLog);
+                    await RespondAsync($"Пользователь уже находиться в бане", ephemeral: true);
+                    await Task.CompletedTask;
+                }
+                if (!user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["banRoles"]))))
+                {
+                    await user.AddRoleAsync(ulong.Parse(_config["banRoles"]));
+                    DateTime timeSpent;
+                    switch (timeEnum)
+                    {
+                        case TimeEnum.Minutes:
+                            timeSpent = DateTime.UtcNow + TimeSpan.FromMinutes(time);
+                            RequestHandlers.ExecuteWrite($"INSERT INTO Mutes(UserId, ModeratorId, Reason, StartTime, EndTime)" +
+                        $"\r\nVALUES ({user.Id} ,{Context.User.Id}, '{reason}', GETDATE(), '{timeSpent.ToString(@"G")}')");
+                            await RespondAsync($"В бан {user.Mention}, по причине {reason} на {time} минут.", ephemeral: true);
+                            break;
+                        case TimeEnum.Hours:
+                            timeSpent = DateTime.UtcNow + TimeSpan.FromHours(time);
+                            RequestHandlers.ExecuteWrite($"INSERT INTO Mutes(UserId, ModeratorId, Reason, StartTime, EndTime)" +
+                        $"\r\nVALUES ({user.Id} ,{Context.User.Id}, '{reason}', GETDATE(), '{timeSpent.ToString(@"G")}')");
+                            await RespondAsync($"В бан {user.Mention}, по причине {reason} на {time} часов.", ephemeral: true);
+                            break;
+                        case TimeEnum.Days:
+                            timeSpent = DateTime.UtcNow + TimeSpan.FromDays(time);
+                            RequestHandlers.ExecuteWrite($"INSERT INTO Mutes(UserId, ModeratorId, Reason, StartTime, EndTime)" +
+                        $"\r\nVALUES ({user.Id} ,{Context.User.Id}, '{reason}', GETDATE(), '{timeSpent.ToString(@"G")}')");
+                            await RespondAsync($"В бан {user.Mention}, по причине {reason} на {time} дней.", ephemeral: true);
+                            break;
+                    }
 
-            await RespondAsync($"В бан нахуй {user.Username}, по причине {reason} на {time}");
+                    ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+                    var EmbedBuilderLog = new EmbedBuilder()
+                        .WithDescription($"{user.Mention} был забанен \n**Причина** {reason}\n**Модератором** {Context.User.Mention}")
+                        .WithFooter(footer =>
+                        {
+                            footer
+                            .WithText("User ban log")
+                            .WithIconUrl(Context.User.GetAvatarUrl());
+                        });
+                    Embed embedLog = EmbedBuilderLog.Build();
+                    await channel.SendMessageAsync(embed: embedLog);
+                }
+            }
+            catch (Exception e)
+            {
+                await RespondAsync($"Не удалось забанить пользователя {user.Mention}: {e.Message}.", ephemeral: true);
+                await Task.CompletedTask;
+            }
+            await Task.CompletedTask;
         }
 
-        [SlashCommand("unban", "разбан")]
+        [RequireOwner]
+        [EnabledInDm(true)]
+        [RequireRole("Модератор")]
+        [SlashCommand("unban", "Разбан")]
         [DefaultMemberPermissions(GuildPermission.BanMembers)]
         public async Task UnBanUser(SocketGuildUser user)
         {
-            //ulong guildRole = 1015567150536204339;
-            await user.RemoveRoleAsync((ulong)StaticVariables.banRoles);
-            await RespondAsync($"Солнце встало для {user.Username}");
-        }
+            // Проверяем, является ли пользователь ботом
+            if (user.IsBot)
+            {
+                await Task.CompletedTask;
+            }
 
+            if (user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["banRoles"])))) 
+            {
+                await user.RemoveRoleAsync(ulong.Parse(_config["banRoles"]));
+            }
+            else 
+            {
+                await RespondAsync($"Пользователь {user.Mention} не в бане.", ephemeral: true);
+                await Task.CompletedTask;
+            }
 
-
-        [SlashCommand("mut", "мут блять")]
-        [DefaultMemberPermissions(GuildPermission.MuteMembers)]
-        public async Task MutUser(SocketGuildUser user, string reason, string time)
-        {
-            userMute.reason = reason;
-            userMute.userID = user.Id.ToString();
-            userMute.time = time;
-
-            if (userMute.time != null)
-                await Requests.RequestsMute(userMute);
-
-            //ulong guildRole = 1015567148220952626;
-            await user.AddRoleAsync((ulong)StaticVariables.muteRoles);
-            await RespondAsync($"В мут нахуй {user.Username}, по причине {reason} на {time}");
-        }
-
-        [SlashCommand("unmut", "размут блять")]
-        [DefaultMemberPermissions(GuildPermission.MuteMembers)]
-        public async Task UnMutUser(SocketGuildUser user)
-        {
-            //ulong guildRole = 1015567148220952626;
-            await user.RemoveRoleAsync((ulong)StaticVariables.muteRoles);
-            await RespondAsync($"Солнце встало для {user.Username}");
-        }
-
-        [SlashCommand("allmut", "Показать людей с мутами")]
-        [DefaultMemberPermissions(GuildPermission.MuteMembers)]
-        public async Task AllmutMember(SocketGuildUser user)
-        {
-            await RespondAsync($"Команда в разработке");
-        }
-
-        [SlashCommand("warn", "предупреждение чела")]
-        [DefaultMemberPermissions(GuildPermission.BanMembers)]
-        public async Task WarnMember(SocketGuildUser user, string reason)
-        {
-            userWarn.reason = reason;
-            userWarn.userID = user.Id.ToString();
-            userWarn.valid = true;
-
-            await Requests.RequestsWarn(userWarn);
-
-            await RespondAsync($"Чепух {user.Username} был предупреждён.");
-        }
-
-        [SlashCommand("rewarn", "убрать пред")]
-        [DefaultMemberPermissions(GuildPermission.BanMembers)]
-        public async Task RewarnMember(SocketGuildUser user, string warnid)
-        {
-            userWarn.warnID = warnid;
-            userWarn.userID = user.Id.ToString();
-            userWarn.valid = false;
-
-            await Requests.RequestsWarn(userWarn);
-
-            await RespondAsync($"Кент на {user.Username} оправдан.");
-        }
-
-        [SlashCommand("allwarn", "показать все варны")]
-        [DefaultMemberPermissions(GuildPermission.BanMembers)]
-        public async Task AllwarnMember(SocketGuildUser user)
-        {
-            await Requests.AllWarnUser(userWarn);
-
-            ITextChannel channel = Context.Client.GetChannel((ulong)StaticVariables.logChanel) as ITextChannel;
+            ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
             var EmbedBuilderLog = new EmbedBuilder()
-                .WithDescription($"Предупреждения участника **{user.Username}:**")
+                .WithDescription($"{user.Mention} был разбанен \n**Модератором** {Context.User.Mention}")
                 .WithFooter(footer =>
                 {
                     footer
-                    .WithText($"Случай {userWarn.warnID} от _**{userWarn.date}**_ числа, выдан {userWarn.issued}")
+                    .WithText("User mut log")
                     .WithIconUrl(Context.User.GetAvatarUrl());
                 });
             Embed embedLog = EmbedBuilderLog.Build();
             await channel.SendMessageAsync(embed: embedLog);
 
-            await RespondAsync($"");
+            await RespondAsync($"Пользователь {user.Mention} был разбанен.", ephemeral: true);
         }
 
-        [SlashCommand("clear", "модер уберись блять")]
-        [DefaultMemberPermissions(GuildPermission.BanMembers)]
-        public async Task ClearChat(ITextChannel textChannel, int amount)
+        [SlashCommand("mut", "Мут")]
+        [RequireOwner]
+        [EnabledInDm(true)]
+        [RequireRole("Модератор")]
+        public async Task MutUser(SocketGuildUser user, string reason, TimeEnum timeEnum, int time)
         {
-            IEnumerable<IMessage> messages = await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync();
-            await ((ITextChannel)Context.Channel).DeleteMessagesAsync(messages);
-            const int delay = 3000;
-            IUserMessage m = await ReplyAsync($"Модер убрал {amount} сообщений.");
-            await Task.Delay(delay);
-            await m.DeleteAsync();
-        }
-
-        /*[SlashCommand("kick", "нахуй чела.")]
-        [RequireBotPermission(GuildPermission.KickMembers)]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task BanGuild(SocketGuildUser targetUser, [Discord.Commands.Remainder] string reason = "Нету такова.")
-        {
-            await targetUser.KickAsync(reason);
-            await ReplyAsync($"**{targetUser}** Забанен. Bye bye :wave:");
-        }
-
-        [SlashCommand("unkick", "Разбан ебла")]
-        [RequireBotPermission(GuildPermission.KickMembers)]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task UnBanGuild(SocketGuildUser targetUser)
-        {
-            IUser user = (IUser)targetUser.Id.ToDictionary();
-            await targetUser.Guild.RemoveBanAsync(user);
-            await ReplyAsync($"**{targetUser}** Unbanned");
-        }*/
-
-        /*[SlashCommand("register", "регаца тута")]
-        public async Task RegisterUser(SocketGuildUser socketGuildUser)
-        {
-
-
-
-            User user = new User();
-            user.Id = socketGuildUser.Id.ToString();
-            user.Coin = "0";
-
-            //"SELECT id FROM users where id={member.id}")
-            //"INSERT INTO users VALUES ({member.id}, '{member.name}', '<@{member.id}>', 50000, 'S','[]',0,0)")
-
-            Requests requests = new Requests();
-            requests.RequestsUser($"INSERT INTO User (id, coin) VALUES ('{user.Id}', {user.Coin})");
-        }*/
-
-        /*[SlashCommand("colors", "поменять цвет кастомки")]
-        public async Task ColorsRoles(IRole role, string roleName, Color color)
-        {
-            await role.ModifyAsync(x =>
+            // Проверяем, является ли пользователь ботом
+            if (user.IsBot)
             {
-                x.Name = roleName;
-                x.Color = color;
-            });
-            //await RespondAsync($"Команда в разработке");
-        }*/
+                await Task.CompletedTask;
+            }
 
-        /*[SlashCommand("timerole", "кастомная роль")]
-        public async Task TimeRoleMember(SocketGuildUser socketGuildUser, string nameRole, GuildPermissions? guildPermissions , Color? color)
-        {
-            await Context.Guild.CreateRoleAsync(nameRole, guildPermissions, color);
-            var role = Context.Guild.Roles.FirstOrDefault(x => x.Name == nameRole);
-            await socketGuildUser.AddRoleAsync(role);
-            //await RespondAsync($"Команда в разработке");
-        }*/
-        /*[Command("Role"]
-        public async Task RoleAsync(SocketGuildUser socketGuildUser)
-        {
-            string roleName = "Name"; //Имя роли которое хочешь выдать
-                                      //Получение списка ролей на сервере
-            var guildRoles = socketGuildUser.Guild.Roles;
-            //Поиск роли с именем Name
-            foreach (var guildRole in guildRoles)
+            try
             {
-                //Если нашёл роль, то выдаст пользователю которого мы отметили([User ID])
-                if (guildRole.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase))
+                if (user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["muteRoles"]))))
                 {
-                    await socketGuildUser.AddRoleAsync(guildRole);
-                    break;
+                    await RespondAsync($"Пользователь {user.Mention} уже находиться в муте", ephemeral: true);
+                    await Task.CompletedTask;
+                }
+                if (!user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["muteRoles"]))))
+                {
+                    await user.AddRoleAsync(ulong.Parse(_config["muteRoles"]));
+                    DateTime timeSpent;
+                    switch (timeEnum)
+                    {
+                        case TimeEnum.Minutes:
+                            timeSpent = DateTime.UtcNow + TimeSpan.FromMinutes(time);
+                            RequestHandlers.ExecuteWrite($"INSERT INTO Mutes(UserId, ModeratorId, Reason, StartTime, EndTime)" +
+                        $"\r\nVALUES ( {user.Id}  , {Context.User.Id} , '{reason}', GETDATE(), '{timeSpent.ToString(@"G")}')");
+                            await RespondAsync($"В мут {user.Mention}, по причине {reason} на {time} минут.", ephemeral: true);
+                            break;
+                        case TimeEnum.Hours:
+                            timeSpent = DateTime.UtcNow + TimeSpan.FromHours(time);
+                            RequestHandlers.ExecuteWrite($"INSERT INTO Mutes(UserId, ModeratorId, Reason, StartTime, EndTime)" +
+                        $"\r\nVALUES ( {user.Id}  , {Context.User.Id} , '{reason}', GETDATE(), '{timeSpent.ToString(@"G")}')");
+                            await RespondAsync($"В мут {user.Mention}, по причине {reason} на {time} часов.", ephemeral: true);
+                            break;
+                        case TimeEnum.Days:
+                            timeSpent = DateTime.UtcNow + TimeSpan.FromDays(time);
+                            RequestHandlers.ExecuteWrite($"INSERT INTO Mutes(UserId, ModeratorId, Reason, StartTime, EndTime)" +
+                        $"\r\nVALUES ( {user.Id}  , {Context.User.Id} , '{reason}', GETDATE(), '{timeSpent.ToString(@"G")}')");
+                            await RespondAsync($"В мут {user.Mention}, по причине {reason} на {time} дней.", ephemeral: true);
+                            break;
+                    }
+
+                    ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+                    var EmbedBuilderLog = new EmbedBuilder()
+                        .WithDescription($"{user.Mention} был замючен \n**Причина** {reason}\n**Модератором** {Context.User.Mention}")
+                        .WithFooter(footer =>
+                        {
+                            footer
+                            .WithText("User mut log")
+                            .WithIconUrl(Context.User.GetAvatarUrl());
+                        });
+                    Embed embedLog = EmbedBuilderLog.Build();
+                    await channel.SendMessageAsync(embed: embedLog);
+
+                    await user.AddRoleAsync(ulong.Parse(_config["muteRoles"]));
                 }
             }
-            return;
-        }*/
+            catch (Exception ex) 
+            {
+                await RespondAsync($"Не удалось замутить пользователя {user.Mention}: {ex.Message}.", ephemeral: true);
+            }
+        }
+
+        [SlashCommand("unmut", "Размут")]
+        [RequireOwner]
+        [EnabledInDm(true)]
+        [RequireRole("Модератор")]
+        public async Task UnMutUser(SocketGuildUser user)
+        {
+            // Проверяем, является ли пользователь ботом
+            if (user.IsBot)
+            {
+                await Task.CompletedTask;
+            }
+
+            if (user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["muteRoles"]))))
+            {
+                await user.RemoveRoleAsync(ulong.Parse(_config["muteRoles"]));
+            }
+            else
+            {
+                await RespondAsync($"Пользователь {user.Mention} не в муте.", ephemeral: true);
+                await Task.CompletedTask;
+            }
+
+            ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+            var EmbedBuilderLog = new EmbedBuilder()
+                .WithDescription($"{user.Mention} был размючен \n**Модератором** {Context.User.Mention}")
+                .WithFooter(footer =>
+                {
+                    footer
+                    .WithText("User unmut log")
+                    .WithIconUrl(Context.User.GetAvatarUrl());
+                });
+            Embed embedLog = EmbedBuilderLog.Build();
+            await channel.SendMessageAsync(embed: embedLog);
+            await RespondAsync($"С пользователя {user.Mention}, был снят мут.", ephemeral: true);
+        }
+
+        [SlashCommand("allmut", "Показать людей с мутами")]
+        [RequireOwner]
+        [EnabledInDm(true)]
+        [RequireRole("Модератор")]
+        public async Task AllmutMember()
+        {
+            var query = RequestHandlers.ExecuteReader($"SELECT TOP 10 UserId, StartTime, EndTime FROM Mutes");
+
+            var tableBuilder = new StringBuilder();
+
+            while (query.Read())
+            {
+                var discordId = await _client.GetUserAsync((ulong)query.GetInt64(0));
+                var startTime = query.GetDateTime(1);
+                var endTime = query.GetDateTime(2);
+           
+                tableBuilder.AppendLine($"**Пользователь:** {discordId.Username}");
+                tableBuilder.AppendLine($"**Начало:** {query.GetDateTime(1)} | **Конец:** {query.GetDateTime(2)}");
+                tableBuilder.AppendLine();
+            }
+
+            var description = tableBuilder.ToString();
+
+            ITextChannel channel = Context.Client.GetChannel(Context.Channel.Id) as ITextChannel;
+            var EmbedBuilderLog = new EmbedBuilder()
+                .WithDescription(description)
+                .WithFooter(footer =>
+                {
+                    footer
+                    .WithText("Список заглушенных пользователей")
+                    .WithIconUrl(Context.User.GetAvatarUrl());
+                });
+            Embed embedLog = EmbedBuilderLog.Build();
+
+            var emoji = new Emoji("\u2705");
+
+            var button = new ButtonBuilder()
+            .WithStyle(ButtonStyle.Primary)
+            .WithEmote(emoji)
+            .WithCustomId("button_click");
+
+            var builder = new ComponentBuilder()
+                .WithButton(button);
+
+            // Код для обработки события нажатия на кнопку
+            // _client экземпляр DiscordSocketClient
+            _client.InteractionCreated += async interaction =>
+            {
+                if (interaction is SocketMessageComponent messageComponent && messageComponent.Data.CustomId == "button_click")
+                {
+                    var messages = await messageComponent.Channel.GetMessagesAsync(2).FlattenAsync(); // Получаем последние 2 сообщения
+                    var lastMessage = messages.ElementAt(0); // Берем последнее сообщение
+                    await lastMessage.DeleteAsync(); // Удаляем последнее сообщение
+                }
+            };
+
+            await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build());
+        }
+
+        [SlashCommand("warn", "Предупреждение пользователя")]
+        [RequireOwner]
+        [EnabledInDm(true)]
+        [RequireRole("Модератор")]
+        public async Task WarnMember(SocketGuildUser user, string reason)
+        {
+            // Проверяем, является ли пользователь ботом
+            if (user.IsBot)
+            {
+                await Task.CompletedTask;
+            }
+
+            DataTable query = new DataTable();
+
+            query.Load(RequestHandlers.ExecuteReader($"SELECT id FROM Warnings WHERE UserId = {user.Id} and Valid = 1"));
+
+            if(query.Rows.Count <= 2)
+            {
+                RequestHandlers.ExecuteWrite($"INSERT INTO Warnings(UserId, ModeratorId, Reason, Time, Valid) " +
+                $"VALUES({user.Id}, {Context.User.Id}, '{reason}', GETDATE(), 1)");
+                Console.WriteLine("Entry added warn.");
+
+                await RespondAsync($"Пользователь {user.Username} был предупреждён." , ephemeral: true);
+            }
+            else if (query.Rows.Count == 3)
+            {
+                RequestHandlers.ExecuteWrite($"INSERT INTO Warnings(UserId, ModeratorId, Reason, Time, Valid) " +
+                $"VALUES({user.Id}, {Context.User.Id}, '{reason}', GETDATE(), 1)");
+
+                await user.AddRoleAsync(ulong.Parse(_config["muteRoles"]));
+
+                await RespondAsync($"Пользователь {user.Username} получил 3 предупреждения.", ephemeral: true);
+            }
+            else if (query.Rows.Count >= 4)
+            {
+                await user.AddRoleAsync(ulong.Parse(_config["banRoles"]));
+
+                await RespondAsync($"Пользователь {user.Username} получил 4 предупреждения.", ephemeral: true);
+            }
+
+            ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+            var EmbedBuilderLog = new EmbedBuilder()
+                .WithDescription($"{user.Mention} был предупреждён \n**Причина** {reason} \n**Модератором** {Context.User.Mention}")
+                .WithFooter(footer =>
+                {
+                    footer
+                    .WithText("User warn log")
+                    .WithIconUrl(Context.User.GetAvatarUrl());
+                });
+            Embed embedLog = EmbedBuilderLog.Build();
+            await channel.SendMessageAsync(embed: embedLog);
+        }
+
+        [SlashCommand("rewarn", "Убрать предупреждение")]
+        [RequireOwner]
+        [EnabledInDm(true)]
+        [RequireRole("Модератор")]
+        public async Task RewarnMember(SocketGuildUser user)
+        {
+            // Проверяем, является ли пользователь ботом
+            if (user.IsBot)
+            {
+                await Task.CompletedTask;
+            }
+
+            if (RequestHandlers.ExecuteReader($"SELECT id FROM Warnings WHERE UserId = {user.Id} and Valid = 1").HasRows)
+            {
+                RequestHandlers.ExecuteWrite($"UPDATE Warnings SET Valid = 0 WHERE Id = (SELECT TOP 1 id FROM Warnings WHERE UserId = {user.Id} and Valid = 1)");
+                Console.WriteLine("Entry update rewarn.");
+            }
+            else
+            {
+                await RespondAsync($"Пользователь {user.Mention} не имеет предупреждений.", ephemeral: true);
+                await Task.CompletedTask;
+            }
+
+            ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+            var EmbedBuilderLog = new EmbedBuilder()
+                .WithDescription($"{user.Mention} снято предупреждение \n**Модератором** {Context.User.Mention}")
+                .WithFooter(footer =>
+                {
+                    footer
+                    .WithText("User warn log")
+                    .WithIconUrl(Context.User.GetAvatarUrl());
+                });
+            Embed embedLog = EmbedBuilderLog.Build();
+            await channel.SendMessageAsync(embed: embedLog);
+
+            await RespondAsync($"Пользователь {user.Username} оправдан.", ephemeral: true);
+        }
+
+        [SlashCommand("allwarn", "Показать все варны")]
+        [RequireOwner]
+        [EnabledInDm(true)]
+        [RequireRole("Модератор")]
+        public async Task AllwarnMember()
+        {
+            var query = RequestHandlers.ExecuteReader($"SELECT UserId, Reason, Time FROM Warnings WHERE Valid = 1 ");
+
+            var tableBuilder = new StringBuilder();
+
+            while (query.Read())
+            {
+                var discordId = await _client.GetUserAsync((ulong)query.GetInt64(0));
+
+                tableBuilder.AppendLine($"**Пользователь:** {discordId.Username}");
+                tableBuilder.AppendLine($"**Причина:** {query.GetString(1)} | **Дата:** {query.GetDateTime(2)}");
+                tableBuilder.AppendLine();
+            }
+
+            var description = tableBuilder.ToString();
+
+            ITextChannel channel = Context.Client.GetChannel(Context.Channel.Id) as ITextChannel;
+            var EmbedBuilderLog = new EmbedBuilder()
+                .WithDescription(description)
+                .WithFooter(footer =>
+                {
+                    footer
+                    .WithText("Список предупреждений")
+                    .WithIconUrl(Context.User.GetAvatarUrl());
+                });
+            Embed embedLog = EmbedBuilderLog.Build();
+
+            var emoji = new Emoji("\u2705");
+
+            var button = new ButtonBuilder()
+            .WithStyle(ButtonStyle.Primary)
+            .WithEmote(emoji)
+            .WithCustomId("button_click");
+
+            var builder = new ComponentBuilder()
+                .WithButton(button);
+
+            // Код для обработки события нажатия на кнопку
+            // _client экземпляр DiscordSocketClient
+            _client.InteractionCreated += async interaction =>
+            {
+                if (interaction is SocketMessageComponent messageComponent && messageComponent.Data.CustomId == "button_click")
+                {
+                    var messages = await messageComponent.Channel.GetMessagesAsync(2).FlattenAsync(); // Получаем последние 2 сообщения
+                    var lastMessage = messages.ElementAt(0); // Берем последнее сообщение
+                    await lastMessage.DeleteAsync(); // Удаляем последнее сообщение
+                }
+            };
+
+            await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build());
+        }
+
+        [SlashCommand("clear", "Удаление сообщений")]
+        [RequireOwner]
+        [EnabledInDm(true)]
+        [RequireRole("Модератор")]
+        public async Task ClearChat(int amount)
+        {
+            var messages = await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync();
+            await ((ITextChannel)Context.Channel).DeleteMessagesAsync(messages);
+            await RespondAsync("Сообщения удалены", ephemeral: true);
+        }
     }
 }

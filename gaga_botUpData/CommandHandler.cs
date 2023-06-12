@@ -1,41 +1,41 @@
 ﻿using System;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
-
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
-
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
 using Discord.Interactions;
-using DSharpPlus.Entities;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using MySqlX.XDevAPI;
 
 namespace gaga_bot
 {
     public class CommandHandler
     {
-        private readonly CommandService _hundler;
+        //private readonly CommandService _hundler;
         private readonly DiscordSocketClient _client;
         private readonly InteractionService _commands;
         private readonly IServiceProvider _services;
-        private readonly IConfiguration _configuration;
-        private readonly SocketGuildUser _socketGuildUser;
+        private readonly IConfiguration _config;
 
         public CommandHandler(DiscordSocketClient client, InteractionService commands, IServiceProvider services)
         {
+            var _builder = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile(path: "config.json");
+
+            // build the configuration and assign to _config          
+            _config = _builder.Build();
+            
             _client = client;
             _commands = commands;
             _services = services;
-            //_hundler = commandService;
 
             // Обработчики событий
             _client.Ready += ClientReadyAsync;
-            //_client.MessageReceived += HandleCommandAsync;
+
         }
 
         public async Task InitializeAsync()
@@ -45,67 +45,11 @@ namespace gaga_bot
 
             // обрабатывать полезные данные InteractionCreated для выполнения команд взаимодействия
             _client.InteractionCreated += HandleInteraction;
-            _client.JoinedGuild += SendJoinMessageAsync;
-            //_client.MessageReceived += HandleCommandAsync;
-
 
             // обрабатывать результаты выполнения команды 
             _commands.SlashCommandExecuted += SlashCommandExecuted;
             _commands.ContextCommandExecuted += ContextCommandExecuted;
             _commands.ComponentCommandExecuted += ComponentCommandExecuted;
-        }
-
-        /*private async Task HandleCommandAsync(SocketMessage rawMessage)
-        {
-            if (rawMessage.Author.IsBot || rawMessage is not SocketUserMessage message || message.Channel is IDMChannel)
-                return;
-
-            var context = new SocketCommandContext(_client, message);
-
-            int argPos = 0;
-
-            JObject config = Functions.GetConfig();
-            string[] prefixes = JsonConvert.DeserializeObject<string[]>(config["prefixes"].ToString());
-
-            // Check if message has any of the prefixes or mentiones the bot.
-            if (prefixes.Any(x => message.HasStringPrefix(x, ref argPos)) || message.HasMentionPrefix(_client.CurrentUser, ref argPos))
-            {
-                // Execute the command.
-                var result = await _hundler.ExecuteAsync(context, argPos, _services);
-
-                if (!result.IsSuccess && result.Error.HasValue)
-                    await context.Channel.SendMessageAsync($":x: {result.ErrorReason}");
-            }
-        }*/
-
-        private async Task SendJoinMessageAsync(SocketGuild guild)
-        {
-            
-
-            JObject config = Functions.Functions.GetConfig();
-            string joinMessage = config["join_message"]?.Value<string>();
-
-            if (string.IsNullOrEmpty(joinMessage))
-                return;
-
-            // Отправьте сообщение о присоединении на первом канале, где бот может отправлять сообщения.
-            foreach (var channel in guild.TextChannels.OrderBy(x => x.Position))
-            {
-                var botPerms = channel.GetPermissionOverwrite(_client.CurrentUser).GetValueOrDefault();
-
-                if (botPerms.SendMessages == PermValue.Deny)
-                    continue;
-
-                try
-                {
-                    await channel.SendMessageAsync(joinMessage);
-                    return;
-                }
-                catch
-                {
-                    continue;
-                }
-            }
         }
 
         private async Task ClientReadyAsync()

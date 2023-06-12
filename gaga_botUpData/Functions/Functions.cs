@@ -1,7 +1,9 @@
 ﻿using Discord;
 using Discord.WebSocket;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -17,6 +19,7 @@ namespace gaga_bot.Functions
             string currently = config["currently"]?.Value<string>().ToLower();
             string statusText = config["playing_status"]?.Value<string>();
             string onlineStatus = config["status"]?.Value<string>().ToLower();
+            string streamurl = config["streamurl"]?.Value<string>();
 
             // Set the online status
             if (!string.IsNullOrEmpty(onlineStatus))
@@ -44,7 +47,8 @@ namespace gaga_bot.Functions
                     _ => ActivityType.Playing
                 };
 
-                await client.SetGameAsync(statusText, type: activity);
+                await client.SetGameAsync(statusText, streamurl, type: activity);
+                //await client.SetGameAsync(statusText, streamurl, type: activity);
                 Console.WriteLine($"{DateTime.Now.TimeOfDay:hh\\:mm\\:ss} | Playing status set | {activity}: {statusText}");
             }            
         }
