@@ -7,8 +7,6 @@ using Discord.WebSocket;
 using Discord.Interactions;
 
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using MySqlX.XDevAPI;
 
 namespace gaga_bot
 {
@@ -19,6 +17,7 @@ namespace gaga_bot
         private readonly InteractionService _commands;
         private readonly IServiceProvider _services;
         private readonly IConfiguration _config;
+        //private System.Timers.Timer timer;
 
         public CommandHandler(DiscordSocketClient client, InteractionService commands, IServiceProvider services)
         {
@@ -54,6 +53,8 @@ namespace gaga_bot
 
         private async Task ClientReadyAsync()
         {
+            //await Functions.Functions.UpdateServerBaner(_client);
+
             await Functions.Functions.SetBotStatusAsync(_client);
         }
 

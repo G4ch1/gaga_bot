@@ -35,7 +35,6 @@ namespace gaga_bot.Modules.SlashCommands
             //_client.JoinedGuild += UserJoinAsync;
         }
 
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         [SlashCommand("ban", "Забанить")]
@@ -100,11 +99,9 @@ namespace gaga_bot.Modules.SlashCommands
             await Task.CompletedTask;
         }
 
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         [SlashCommand("unban", "Разбан")]
-        [DefaultMemberPermissions(GuildPermission.BanMembers)]
         public async Task UnBanUser(SocketGuildUser user)
         {
             // Проверяем, является ли пользователь ботом
@@ -116,30 +113,28 @@ namespace gaga_bot.Modules.SlashCommands
             if (user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["banRoles"])))) 
             {
                 await user.RemoveRoleAsync(ulong.Parse(_config["banRoles"]));
+                ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+                var EmbedBuilderLog = new EmbedBuilder()
+                    .WithDescription($"{user.Mention} был разбанен \n**Модератором** {Context.User.Mention}")
+                    .WithFooter(footer =>
+                    {
+                        footer
+                        .WithText("User mut log")
+                        .WithIconUrl(Context.User.GetAvatarUrl());
+                    });
+                Embed embedLog = EmbedBuilderLog.Build();
+                await channel.SendMessageAsync(embed: embedLog);
+
+                await RespondAsync($"Пользователь {user.Mention} был разбанен.", ephemeral: true);
             }
             else 
             {
                 await RespondAsync($"Пользователь {user.Mention} не в бане.", ephemeral: true);
                 await Task.CompletedTask;
             }
-
-            ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
-            var EmbedBuilderLog = new EmbedBuilder()
-                .WithDescription($"{user.Mention} был разбанен \n**Модератором** {Context.User.Mention}")
-                .WithFooter(footer =>
-                {
-                    footer
-                    .WithText("User mut log")
-                    .WithIconUrl(Context.User.GetAvatarUrl());
-                });
-            Embed embedLog = EmbedBuilderLog.Build();
-            await channel.SendMessageAsync(embed: embedLog);
-
-            await RespondAsync($"Пользователь {user.Mention} был разбанен.", ephemeral: true);
         }
 
         [SlashCommand("mut", "Мут")]
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         public async Task MutUser(SocketGuildUser user, string reason, TimeEnum timeEnum, int time)
@@ -205,7 +200,6 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("unmut", "Размут")]
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         public async Task UnMutUser(SocketGuildUser user)
@@ -219,45 +213,43 @@ namespace gaga_bot.Modules.SlashCommands
             if (user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["muteRoles"]))))
             {
                 await user.RemoveRoleAsync(ulong.Parse(_config["muteRoles"]));
+                ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+                var EmbedBuilderLog = new EmbedBuilder()
+                    .WithDescription($"{user.Mention} был размючен \n**Модератором** {Context.User.Mention}")
+                    .WithFooter(footer =>
+                    {
+                        footer
+                        .WithText("User unmut log")
+                        .WithIconUrl(Context.User.GetAvatarUrl());
+                    });
+                Embed embedLog = EmbedBuilderLog.Build();
+                await channel.SendMessageAsync(embed: embedLog);
+                await RespondAsync($"С пользователя {user.Mention}, был снят мут.", ephemeral: true);
             }
             else
             {
                 await RespondAsync($"Пользователь {user.Mention} не в муте.", ephemeral: true);
                 await Task.CompletedTask;
             }
-
-            ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
-            var EmbedBuilderLog = new EmbedBuilder()
-                .WithDescription($"{user.Mention} был размючен \n**Модератором** {Context.User.Mention}")
-                .WithFooter(footer =>
-                {
-                    footer
-                    .WithText("User unmut log")
-                    .WithIconUrl(Context.User.GetAvatarUrl());
-                });
-            Embed embedLog = EmbedBuilderLog.Build();
-            await channel.SendMessageAsync(embed: embedLog);
-            await RespondAsync($"С пользователя {user.Mention}, был снят мут.", ephemeral: true);
         }
 
         [SlashCommand("allmut", "Показать людей с мутами")]
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         public async Task AllmutMember()
         {
-            var query = RequestHandlers.ExecuteReader($"SELECT TOP 10 UserId, StartTime, EndTime FROM Mutes");
+            var query = RequestHandlers.ExecuteReader($"SELECT TOP 10 UserId, StartTime, EndTime, ModeratorId FROM Mutes");
 
             var tableBuilder = new StringBuilder();
 
             while (query.Read())
             {
                 var discordId = await _client.GetUserAsync((ulong)query.GetInt64(0));
-                var startTime = query.GetDateTime(1);
-                var endTime = query.GetDateTime(2);
-           
-                tableBuilder.AppendLine($"**Пользователь:** {discordId.Username}");
-                tableBuilder.AppendLine($"**Начало:** {query.GetDateTime(1)} | **Конец:** {query.GetDateTime(2)}");
+                var moderatorId = await _client.GetUserAsync((ulong)query.GetInt64(3));
+
+                tableBuilder.AppendLine($":person_in_manual_wheelchair: **Пользователь:** {discordId.Username}");
+                tableBuilder.AppendLine($":no_entry: **Начало:** {query.GetDateTime(1)} | :end: **Конец:** {query.GetDateTime(2)}");
+                tableBuilder.AppendLine($":beginner: **Модератор:** {moderatorId.Username}");
                 tableBuilder.AppendLine();
             }
 
@@ -300,7 +292,6 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("warn", "Предупреждение пользователя")]
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         public async Task WarnMember(SocketGuildUser user, string reason)
@@ -353,7 +344,6 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("rewarn", "Убрать предупреждение")]
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         public async Task RewarnMember(SocketGuildUser user)
@@ -367,31 +357,28 @@ namespace gaga_bot.Modules.SlashCommands
             if (RequestHandlers.ExecuteReader($"SELECT id FROM Warnings WHERE UserId = {user.Id} and Valid = 1").HasRows)
             {
                 RequestHandlers.ExecuteWrite($"UPDATE Warnings SET Valid = 0 WHERE Id = (SELECT TOP 1 id FROM Warnings WHERE UserId = {user.Id} and Valid = 1)");
-                Console.WriteLine("Entry update rewarn.");
+                ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+                var EmbedBuilderLog = new EmbedBuilder()
+                    .WithDescription($"{user.Mention} снято предупреждение \n**Модератором** {Context.User.Mention}")
+                    .WithFooter(footer =>
+                    {
+                        footer
+                        .WithText("User warn log")
+                        .WithIconUrl(Context.User.GetAvatarUrl());
+                    });
+                Embed embedLog = EmbedBuilderLog.Build();
+                await channel.SendMessageAsync(embed: embedLog);
+
+                await RespondAsync($"Пользователь {user.Username} оправдан.", ephemeral: true);
             }
             else
             {
                 await RespondAsync($"Пользователь {user.Mention} не имеет предупреждений.", ephemeral: true);
                 await Task.CompletedTask;
             }
-
-            ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
-            var EmbedBuilderLog = new EmbedBuilder()
-                .WithDescription($"{user.Mention} снято предупреждение \n**Модератором** {Context.User.Mention}")
-                .WithFooter(footer =>
-                {
-                    footer
-                    .WithText("User warn log")
-                    .WithIconUrl(Context.User.GetAvatarUrl());
-                });
-            Embed embedLog = EmbedBuilderLog.Build();
-            await channel.SendMessageAsync(embed: embedLog);
-
-            await RespondAsync($"Пользователь {user.Username} оправдан.", ephemeral: true);
         }
 
         [SlashCommand("allwarn", "Показать все варны")]
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         public async Task AllwarnMember()
@@ -448,7 +435,6 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("clear", "Удаление сообщений")]
-        [RequireOwner]
         [EnabledInDm(true)]
         [RequireRole("Модератор")]
         public async Task ClearChat(int amount)

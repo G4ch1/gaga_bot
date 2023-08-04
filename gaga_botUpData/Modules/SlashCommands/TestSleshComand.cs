@@ -38,6 +38,7 @@ namespace gaga_bot.Modules.SlashCommands
 
         // Эта команда будет выглядеть следующим образом
         // group-name subcommand-group-name echo
+        [RequireOwner]
         [SlashCommand("echo", "Echo an input")]
         public async Task EchoSubcommand(string input)
             => await RespondAsync(input, components: new ComponentBuilder().WithButton("Echo", $"echoButton_{input}").Build());
@@ -55,6 +56,7 @@ namespace gaga_bot.Modules.SlashCommands
         /// Модальная реализация будет выглядеть так:
         /// </returns>
         // Регистрирует команду, которая будет отвечать модальным сообщением.
+        [RequireOwner]
         [SlashCommand("food", "Tell us about your favorite food.")]
         public async Task Command()
             => await Context.Interaction.RespondWithModalAsync<FoodModal>("food_menu");
@@ -127,6 +129,7 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         // вам нужно добавить атрибут `Autocomplete` перед параметром, чтобы добавить к нему автозавершение
+        [RequireOwner]
         [SlashCommand("command_name", "command_description")]
         public async Task ExampleCommand([Summary("parameter_name"), Autocomplete] string parameterWithAutocompletion)
             => await RespondAsync($"Your choice: {parameterWithAutocompletion}");
@@ -160,6 +163,7 @@ namespace gaga_bot.Modules.SlashCommands
         // Both of the commands below are displayed to the users identically.
 
         // With complex parameter
+        [RequireOwner]
         [SlashCommand("create-vector", "Create a 3D vector.")]
         public async Task CreateVector([ComplexParameter] Vector3 vector3)
         {
@@ -172,6 +176,7 @@ namespace gaga_bot.Modules.SlashCommands
 
 
         //Типы каналов для параметра IChannel также можно ограничить с помощью атрибута типов каналов .
+        [RequireOwner]
         [SlashCommand("name", "Description")]
         public async Task Command([ChannelTypes(ChannelType.Stage, ChannelType.Text)] IChannel channel)
         {

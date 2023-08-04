@@ -35,6 +35,7 @@ namespace gaga_bot.Modules.SlashCommands
         [Group("clan", "кланы")]
         public class CommandGroupModule : InteractionModuleBase<SocketInteractionContext>
         {
+            [RequireOwner]
             [SlashCommand("create", "Создать клан")]
             public async Task CreateClan()
             {
@@ -44,8 +45,17 @@ namespace gaga_bot.Modules.SlashCommands
                 await RespondAsync("В разработке", ephemeral: true);
             }
 
+            [RequireOwner]
             [SlashCommand("request", "подать заявку")]
             public async Task RequestToJoin()
+            {
+                //запрос на вступление в клан
+                await RespondAsync("В разработке", ephemeral: true);
+            }
+
+            [RequireOwner]
+            [SlashCommand("accept-in-clan", "принять заявку")]
+            public async Task AcceptIntoClan()
             {
                 //запрос на вступление в клан
                 await RespondAsync("В разработке", ephemeral: true);
