@@ -32,7 +32,7 @@ namespace gaga_bot.Modules.SlashCommands
             //_client.JoinedGuild += UserJoinAsync;
         }
 
-        [Group("clan", "кланы")]
+        /*[Group("clan", "кланы")]
         public class CommandGroupModule : InteractionModuleBase<SocketInteractionContext>
         {
             [RequireOwner]
@@ -60,6 +60,7 @@ namespace gaga_bot.Modules.SlashCommands
                 //запрос на вступление в клан
                 await RespondAsync("В разработке", ephemeral: true);
             }
-        }
+        }*/
+
     }
 }

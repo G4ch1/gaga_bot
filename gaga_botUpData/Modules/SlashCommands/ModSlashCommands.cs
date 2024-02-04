@@ -3,14 +3,9 @@ using Discord.Interactions;
 using Discord.WebSocket;
 
 using System;
-using System.Data;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-using gaga_bot.Attributes;
 using Microsoft.Extensions.Configuration;
-using static LibraryAttributes.EnumValues;
 
 namespace gaga_bot.Modules.SlashCommands
 {
@@ -35,7 +30,7 @@ namespace gaga_bot.Modules.SlashCommands
             //_client.JoinedGuild += UserJoinAsync;
         }
 
-        [EnabledInDm(true)]
+        /*[EnabledInDm(false)]
         [RequireRole("Модератор")]
         [SlashCommand("ban", "Забанить")]
         public async Task BanUser(SocketGuildUser user, string reason, TimeEnum timeEnum, int time)
@@ -99,7 +94,7 @@ namespace gaga_bot.Modules.SlashCommands
             await Task.CompletedTask;
         }
 
-        [EnabledInDm(true)]
+        [EnabledInDm(false)]
         [RequireRole("Модератор")]
         [SlashCommand("unban", "Разбан")]
         public async Task UnBanUser(SocketGuildUser user)
@@ -110,7 +105,9 @@ namespace gaga_bot.Modules.SlashCommands
                 await Task.CompletedTask;
             }
 
-            if (user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["banRoles"])))) 
+            var UserAvatar = Context.User.GetAvatarUrl();
+            //ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
+            if (user.Roles.Contains(user.Guild.Roles.FirstOrDefault(x => x.Id == ulong.Parse(_config["banRoles"]))))
             {
                 await user.RemoveRoleAsync(ulong.Parse(_config["banRoles"]));
                 ITextChannel channel = Context.Client.GetChannel(ulong.Parse(_config["logChanel"])) as ITextChannel;
@@ -127,7 +124,7 @@ namespace gaga_bot.Modules.SlashCommands
 
                 await RespondAsync($"Пользователь {user.Mention} был разбанен.", ephemeral: true);
             }
-            else 
+            else
             {
                 await RespondAsync($"Пользователь {user.Mention} не в бане.", ephemeral: true);
                 await Task.CompletedTask;
@@ -135,7 +132,7 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("mut", "Мут")]
-        [EnabledInDm(true)]
+        [EnabledInDm(false)]
         [RequireRole("Модератор")]
         public async Task MutUser(SocketGuildUser user, string reason, TimeEnum timeEnum, int time)
         {
@@ -200,7 +197,7 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("unmut", "Размут")]
-        [EnabledInDm(true)]
+        [EnabledInDm(false)]
         [RequireRole("Модератор")]
         public async Task UnMutUser(SocketGuildUser user)
         {
@@ -234,7 +231,7 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("allmut", "Показать людей с мутами")]
-        [EnabledInDm(true)]
+        [EnabledInDm(false)]
         [RequireRole("Модератор")]
         public async Task AllmutMember()
         {
@@ -292,7 +289,7 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("warn", "Предупреждение пользователя")]
-        [EnabledInDm(true)]
+        [EnabledInDm(false)]
         [RequireRole("Модератор")]
         public async Task WarnMember(SocketGuildUser user, string reason)
         {
@@ -344,7 +341,7 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("rewarn", "Убрать предупреждение")]
-        [EnabledInDm(true)]
+        [EnabledInDm(false)]
         [RequireRole("Модератор")]
         public async Task RewarnMember(SocketGuildUser user)
         {
@@ -379,7 +376,7 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         [SlashCommand("allwarn", "Показать все варны")]
-        [EnabledInDm(true)]
+        [EnabledInDm(false)]
         [RequireRole("Модератор")]
         public async Task AllwarnMember()
         {
@@ -432,16 +429,27 @@ namespace gaga_bot.Modules.SlashCommands
             };
 
             await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build());
-        }
+        }*/
 
         [SlashCommand("clear", "Удаление сообщений")]
-        [EnabledInDm(true)]
-        [RequireRole("Модератор")]
+        [RequireRole("котенок-поваренок")]
         public async Task ClearChat(int amount)
         {
-            var messages = await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync();
-            await ((ITextChannel)Context.Channel).DeleteMessagesAsync(messages);
-            await RespondAsync("Сообщения удалены", ephemeral: true);
+            try
+            {
+                // Проверяем, является ли пользователь ботом
+                if (Context.User.IsBot)
+                    await Task.CompletedTask;
+
+                var messages = await Context.Channel.GetMessagesAsync(amount).FlattenAsync();
+                await ((ITextChannel)Context.Channel).DeleteMessagesAsync(messages);
+                await RespondAsync("Сообщения удалены", ephemeral: true);
+            }
+            catch (Exception ex) 
+            {
+                await RespondAsync($"Ты чо дурак блин 👉👈😳?", ephemeral: true);
+                Console.WriteLine($"Exception | ClearChat | {ex.Message}");
+            }
         }
     }
 }

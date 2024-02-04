@@ -30,59 +30,66 @@ namespace gaga_bot.Modules.SlashCommands
             _client = client;
         }
 
+        //[EnabledInDm(false)]
         [SlashCommand("profiles", "Посмотреть профиль")]
-        public async Task ChekBalance(SocketGuildUser user)
+        public async Task ChekBalance()
         {
-            var query = RequestHandlers.ExecuteReader($"SELECT DiscordId, Currency, (SELECT COUNT(UserId) FROM Estimate " +
-                $"WHERE UserId = {user.Id}) AS Likes, VoiceTime FROM Users WHERE DiscordId = {user.Id}");
-
-            var tableBuilder = new StringBuilder();
-
-            while (query.Read())
+            try
             {
-                var discordId = await _client.GetUserAsync((ulong)query.GetInt64(0));
+                var user = Context.User;
+                Console.WriteLine("Log | ChekBalance | Start commands");
+                var query = RequestHandlers.ExecuteReader($"SELECT DiscordId, Currency, (SELECT COUNT(UserId) FROM Estimate " +
+                    $"WHERE UserId = {user.Id}) AS Likes, VoiceTime FROM Users WHERE DiscordId = {user.Id}");
 
-                tableBuilder.AppendLine($"**Пользователь:** {discordId.Username}");
-                tableBuilder.AppendLine($"**Баланс:** {query.GetDecimal(1)} | **:thumbsup:** {query.GetInt32(2)} | **:microphone:** {query.GetTimeSpan(3)}");
-                tableBuilder.AppendLine();
-            }
+                var tableBuilder = new StringBuilder();
 
-            var description = tableBuilder.ToString();
-
-            ITextChannel channel = Context.Client.GetChannel(Context.Channel.Id) as ITextChannel;
-            var EmbedBuilderLog = new EmbedBuilder()
-                .WithDescription(description)
-                .WithFooter(footer =>
+                while (query.Read())
                 {
-                    footer
-                    .WithText("Список предупреждений")
-                    .WithIconUrl(Context.User.GetAvatarUrl());
-                });
-            Embed embedLog = EmbedBuilderLog.Build();
+                    var discordId = Context.Guild.GetUser((ulong)query.GetInt64(0));
 
-            var emoji = new Emoji("\u2705");
-
-            var button = new ButtonBuilder()
-            .WithStyle(ButtonStyle.Primary)
-            .WithEmote(emoji)
-            .WithCustomId("button_click");
-
-            var builder = new ComponentBuilder()
-                .WithButton(button);
-
-            // Код для обработки события нажатия на кнопку
-            // _client экземпляр DiscordSocketClient
-            _client.InteractionCreated += async interaction =>
-            {
-                if (interaction is SocketMessageComponent messageComponent && messageComponent.Data.CustomId == "button_click")
-                {
-                    var messages = await messageComponent.Channel.GetMessagesAsync(2).FlattenAsync(); // Получаем последние 2 сообщения
-                    var lastMessage = messages.ElementAt(0); // Берем последнее сообщение
-                    await lastMessage.DeleteAsync(); // Удаляем последнее сообщение
+                    tableBuilder.AppendLine($"**Пользователь:** {discordId.Username}");
+                    tableBuilder.AppendLine($"**Баланс:** {query.GetDecimal(1)} | **:thumbsup:** {query.GetInt32(2)} | **:microphone:** {query.GetTimeSpan(3)}");
+                    tableBuilder.AppendLine();
                 }
-            };
 
-            await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build());
+                var description = tableBuilder.ToString();
+
+                ITextChannel channel = Context.Client.GetChannel(Context.Channel.Id) as ITextChannel;
+                var EmbedBuilderLog = new EmbedBuilder()
+                    .WithDescription(description)
+                    .WithFooter(footer =>
+                    {
+                        footer
+                        .WithText("Список предупреждений")
+                        .WithIconUrl(Context.User.GetAvatarUrl());
+                    });
+                Embed embedLog = EmbedBuilderLog.Build();
+
+                var emoji = new Emoji("\u2705");
+
+                var button = new ButtonBuilder()
+                .WithStyle(ButtonStyle.Primary)
+                .WithEmote(emoji)
+                .WithCustomId("button_click");
+
+                var builder = new ComponentBuilder()
+                    .WithButton(button);
+
+                // Код для обработки события нажатия на кнопку
+                // _client экземпляр DiscordSocketClient
+                _client.InteractionCreated += async interaction =>
+                {
+                    if (interaction is SocketMessageComponent messageComponent && messageComponent.Data.CustomId == "button_click")
+                    {
+                        var messages = await messageComponent.Channel.GetMessagesAsync(2).FlattenAsync(); // Получаем последние 2 сообщения
+                        var lastMessage = messages.ElementAt(0); // Берем последнее сообщение
+                        await lastMessage.DeleteAsync(); // Удаляем последнее сообщение
+                    }
+                };
+
+                await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build());
+            }
+            catch (Exception ex) { Console.WriteLine($"Exception | ChekBalance | Exceptions {ex.Message}"); }
         }
     }
 }

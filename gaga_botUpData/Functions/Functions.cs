@@ -9,6 +9,7 @@ using System.IO;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
 
 namespace gaga_bot.Functions
 {
@@ -102,7 +103,7 @@ namespace gaga_bot.Functions
                 await client.SetGameAsync(statusText, streamurl, type: activity);
                 //await client.SetGameAsync(statusText, streamurl, type: activity);
                 Console.WriteLine($"{DateTime.Now.TimeOfDay:hh\\:mm\\:ss} | Playing status set | {activity}: {statusText}");
-            }            
+            }       
         }
 
 

@@ -8,6 +8,9 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Configuration;
+using gaga_bot.Attributes;
+using System.Data.SqlClient;
+using System.Security.Cryptography;
 
 namespace gaga_bot.Modules.SlashCommands
 {
@@ -36,10 +39,21 @@ namespace gaga_bot.Modules.SlashCommands
             //_client.JoinedGuild += UserJoinAsync;
         }
 
+        [EnabledInDm(false)]
+        [SlashCommand("test", "test")]
+        public async Task Test()
+        {
+            var chanel = Context.Channel;
+            var user = Context.User;
+            await RespondAsync($"Ну прожал ты тест, и чо, типо тестер дохуя?", ephemeral: true);
+            //EmbedMessages.SendEmbed(user,chanel);
+        }
+
         // Эта команда будет выглядеть следующим образом
         // group-name subcommand-group-name echo
-        [RequireOwner]
-        [SlashCommand("echo", "Echo an input")]
+        [EnabledInDm(false)]
+        [RequireRole("котенок-поваренок")]
+        //[SlashCommand("echo", "Echo an input")]
         public async Task EchoSubcommand(string input)
             => await RespondAsync(input, components: new ComponentBuilder().WithButton("Echo", $"echoButton_{input}").Build());
 
@@ -56,32 +70,33 @@ namespace gaga_bot.Modules.SlashCommands
         /// Модальная реализация будет выглядеть так:
         /// </returns>
         // Регистрирует команду, которая будет отвечать модальным сообщением.
-        [RequireOwner]
-        [SlashCommand("food", "Tell us about your favorite food.")]
+        [EnabledInDm(false)]
+        //[RequireRole("котенок-поваренок")]
+        [SlashCommand("предложка", "Тут вы можете предложить свою идею.")]
         public async Task Command()
-            => await Context.Interaction.RespondWithModalAsync<FoodModal>("food_menu");
+            => await Context.Interaction.RespondWithModalAsync<FoodModal>("предложка");
 
         // Определяет модальность, которая будет отправлена.
         public class FoodModal : IModal
         {
-            public string Title => "Fav Food";
+            public string Title => "Предложка";
             // Строки с атрибутом ModalTextInput автоматически становятся компонентами.
 
-            [InputLabel("What??")]
-            [ModalTextInput("food_name", placeholder: "Pizza", maxLength: 20)]
+            [InputLabel("Тема")]
+            [ModalTextInput("Тема", placeholder: "...", maxLength: 20)]
             public string Food { get; set; }
 
             // Для дальнейшей настройки ввода можно указать дополнительные параметры.    
             // Параметры могут быть необязательными
             [RequiredInput(false)]
-            [InputLabel("Why??")]
-            [ModalTextInput("food_reason", TextInputStyle.Paragraph, "Kuz it's tasty", maxLength: 500)]
+            [InputLabel("Описание")]
+            [ModalTextInput("Описание", TextInputStyle.Paragraph, "...", maxLength: 500)]
             public string Reason { get; set; }
         }
 
         //Отвечает на модальный.
 
-        [ModalInteraction("food_menu")]
+        [ModalInteraction("предложка")]
         public async Task ModalResponse(FoodModal modal)
         {
             // Проверьте, заполнено ли поле "Почему?
@@ -91,9 +106,7 @@ namespace gaga_bot.Modules.SlashCommands
                 : $" because {modal.Reason}";
 
             // Постройте сообщение для отправки..
-            string message = "hey @everyone, I just learned " +
-                $"{Context.User.Mention}'s favorite food is " +
-                $"{modal.Food}{reason}";
+            string message = "Ваше предложение отправленно на расмотрение 😎";
 
             // Укажите AllowedMentions, чтобы мы не пинговали всех подряд..
             AllowedMentions mentions = new();
@@ -111,16 +124,17 @@ namespace gaga_bot.Modules.SlashCommands
         /// Автозаполнение команд
         /// </summary>
         /// <returns></returns>
-        [AutocompleteCommand("parameter_name", "command_name")]
+        /// [EnabledInDm(true)]
+        [AutocompleteCommand("parameter_name", "опросник")]
         public async Task Autocomplete()
         {
             string userInput = (Context.Interaction as SocketAutocompleteInteraction).Data.Current.Value.ToString();
 
             IEnumerable<AutocompleteResult> results = new[]
             {
-        new AutocompleteResult("foo", "foo_value"),
-        new AutocompleteResult("bar", "bar_value"),
-        new AutocompleteResult("baz", "baz_value"),
+        new AutocompleteResult("1", "Вы выбрали 1"),
+        new AutocompleteResult("2", "Вы выбрали 2"),
+        new AutocompleteResult("3", "Вы выбрали 3"),
     }.Where(x => x.Name.StartsWith(userInput, StringComparison.InvariantCultureIgnoreCase)); // отправлять только те предложения, которые начинаются с ввода пользователя; использовать нечувствительное к регистру соответствие
 
 
@@ -129,10 +143,11 @@ namespace gaga_bot.Modules.SlashCommands
         }
 
         // вам нужно добавить атрибут `Autocomplete` перед параметром, чтобы добавить к нему автозавершение
-        [RequireOwner]
-        [SlashCommand("command_name", "command_description")]
+        //[RequireOwner]
+        [EnabledInDm(false)]
+        [SlashCommand("опросник", "Пройди опрос")]
         public async Task ExampleCommand([Summary("parameter_name"), Autocomplete] string parameterWithAutocompletion)
-            => await RespondAsync($"Your choice: {parameterWithAutocompletion}");
+            => await RespondAsync($"Вы ввели свое значение: {parameterWithAutocompletion}", ephemeral: true);
 
 
 
@@ -163,8 +178,8 @@ namespace gaga_bot.Modules.SlashCommands
         // Both of the commands below are displayed to the users identically.
 
         // With complex parameter
-        [RequireOwner]
-        [SlashCommand("create-vector", "Create a 3D vector.")]
+        [EnabledInDm(false)]
+        //[SlashCommand("create-vector", "Create a 3D vector.")]
         public async Task CreateVector([ComplexParameter] Vector3 vector3)
         {
             await RespondAsync($"Test", ephemeral: true);
@@ -177,16 +192,12 @@ namespace gaga_bot.Modules.SlashCommands
 
         //Типы каналов для параметра IChannel также можно ограничить с помощью атрибута типов каналов .
         [RequireOwner]
-        [SlashCommand("name", "Description")]
+        [EnabledInDm(false)]
+        //[SlashCommand("name", "Description")]
         public async Task Command([ChannelTypes(ChannelType.Stage, ChannelType.Text)] IChannel channel)
         {
             await RespondAsync("Test", ephemeral: true);
         }
-
-
-
-
-
 
         public enum Animal
         {
@@ -197,43 +208,38 @@ namespace gaga_bot.Modules.SlashCommands
             GuineaPig
         }
 
-        [RequireOwner]
-        [SlashCommand("test", "test")]
-        public async Task Test(Animal animal)
-        {
-            ITextChannel channel = Context.Client.GetChannel(Context.Channel.Id) as ITextChannel;
-            var EmbedBuilderLog = new EmbedBuilder()
-                .WithDescription($"Test\n test\n Test\n test\n Test\n test\n")
-                .WithFooter(footer =>
-                {
-                    footer
-                    .WithText($"{Context.User.Username}")
-                    .WithIconUrl(Context.User.GetAvatarUrl());
-                });
-
-            var emoji = new Emoji("\u2705");
-
-            var button = new ButtonBuilder()
-            .WithStyle(ButtonStyle.Primary)
-            .WithEmote(emoji)
-            .WithCustomId("button_click");
-
-            var builder = new ComponentBuilder()
-                .WithButton(button);
-
-            // Код для обработки события нажатия на кнопку
-            // _client экземпляр DiscordSocketClient
-            _client.InteractionCreated += async interaction =>
+        /*ITextChannel channel = Context.Client.GetChannel(Context.Channel.Id) as ITextChannel;
+        var EmbedBuilderLog = new EmbedBuilder()
+            .WithDescription($"Test\n test\n Test\n test\n Test\n test\n")
+            .WithFooter(footer =>
             {
-                if (interaction is SocketMessageComponent messageComponent && messageComponent.Data.CustomId == "button_click")
-                {
-                    var messages = await messageComponent.Channel.GetMessagesAsync(2).FlattenAsync(); // Получаем последние 2 сообщения
-                    var lastMessage = messages.ElementAt(0); // Берем последнее сообщение
-                    await lastMessage.DeleteAsync(); // Удаляем последнее сообщение
-                }
-            };
+                footer
+                .WithText($"{Context.User.Username}")
+                .WithIconUrl(Context.User.GetAvatarUrl());
+            });
 
-            await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build());
-        }
+        var emoji = new Emoji("\u2705");
+
+        var button = new ButtonBuilder()
+        .WithStyle(ButtonStyle.Primary)
+        .WithEmote(emoji)
+        .WithCustomId("button_click");
+
+        var builder = new ComponentBuilder()
+            .WithButton(button);
+
+        // Код для обработки события нажатия на кнопку
+        // _client экземпляр DiscordSocketClient
+        _client.InteractionCreated += async interaction =>
+        {
+            if (interaction is SocketMessageComponent messageComponent && messageComponent.Data.CustomId == "button_click")
+            {
+                var messages = await messageComponent.Channel.GetMessagesAsync(2).FlattenAsync(); // Получаем последние 2 сообщения
+                var lastMessage = messages.ElementAt(0); // Берем последнее сообщение
+                await lastMessage.DeleteAsync(); // Удаляем последнее сообщение
+            }
+        };
+
+        await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build());*/
     }
 }

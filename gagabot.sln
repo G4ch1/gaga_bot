@@ -5,8 +5,6 @@ VisualStudioVersion = 17.3.32901.215
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gaga_bot", "gaga_botUpData\gaga_bot.csproj", "{46E5A8DD-814E-45F9-AC71-316868F80571}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryAttributes", "LibraryAttributes\LibraryAttributes.csproj", "{5738B195-F557-4BD2-9E55-58546F571906}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{46E5A8DD-814E-45F9-AC71-316868F80571}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{46E5A8DD-814E-45F9-AC71-316868F80571}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{46E5A8DD-814E-45F9-AC71-316868F80571}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5738B195-F557-4BD2-9E55-58546F571906}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5738B195-F557-4BD2-9E55-58546F571906}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5738B195-F557-4BD2-9E55-58546F571906}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5738B195-F557-4BD2-9E55-58546F571906}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
