@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using gaga_bot.Attributes;
 using Microsoft.Extensions.Configuration;
+using Discord.Net;
 
 namespace gaga_bot.Modules.SlashCommands
 {
@@ -88,6 +89,17 @@ namespace gaga_bot.Modules.SlashCommands
                 };
 
                 await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build());
+            }
+            catch (RateLimitedException ex)
+            {
+                // Получаем время ожидания из исключения
+                Console.WriteLine(ex.Message);
+
+                // Ожидаем указанное время и повторяем запрос
+                await Task.Delay(1800);
+                // Повторяем запрос здесь
+
+                await ChekBalance();
             }
             catch (Exception ex) { Console.WriteLine($"Exception | ChekBalance | Exceptions {ex.Message}"); }
         }

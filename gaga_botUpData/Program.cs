@@ -259,7 +259,8 @@ namespace gaga_bot
                         OverwritePermissions permissions = new OverwritePermissions(
                             viewChannel: PermValue.Allow, // Разрешено просматривать канал
                             connect: PermValue.Allow, // Разрешено подключаться к голосовому каналу
-                            speak: PermValue.Allow // Разрешено говорить в голосовом канале
+                            speak: PermValue.Allow, // Разрешено говорить в голосовом канале
+                            useVoiceActivation: PermValue.Allow
                         );
 
                         var category = _client.GetGuild(ulong.Parse(_config["serverId"])).CategoryChannels.FirstOrDefault(x => x.Name == "приват");
@@ -316,10 +317,20 @@ namespace gaga_bot
                                 speak: PermValue.Allow // Разрешено говорить в голосовом канале
                             );
                             // Получаем или создаем объект разрешений для пользователя
-                            var existingPermissions = before.VoiceChannel.GetPermissionOverwrite(before.VoiceChannel.ConnectedUsers.First()) ?? new OverwritePermissions();
+
+                            var newOwner = before.VoiceChannel.ConnectedUsers.First() as IUser;
+
+                            var existingPermissions = before.VoiceChannel.GetPermissionOverwrite(newOwner) ?? new OverwritePermissions();
                             // Применяем изменения к каналу
-                            await before.VoiceChannel.AddPermissionOverwriteAsync(before.VoiceChannel.ConnectedUsers.First(), permissions);
-                            await before.VoiceChannel.ModifyAsync(properties => properties.Name = before.VoiceChannel.ConnectedUsers.First().ToString());
+                            await before.VoiceChannel.AddPermissionOverwriteAsync(newOwner, permissions);
+                            await before.VoiceChannel.ModifyAsync(properties => properties.Name = newOwner.ToString());
+
+                            OverwritePermissions permissionsTextChanelsView = new OverwritePermissions(
+                            viewChannel: PermValue.Allow, // Разрешено просматривать канал
+                            sendMessages: PermValue.Allow
+                            );
+
+                            await (_client.GetGuild(ulong.Parse(_config["serverId"])).GetChannel(ulong.Parse(_config["privateParamChanels"])) as ITextChannel).AddPermissionOverwriteAsync(newOwner, permissionsTextChanelsView);
 
                             Console.WriteLine($"Log | UserVoiceStateUpdated | Deleted chanels {before.VoiceChannel.Name}");
                             channel = _client.GetChannel(ulong.Parse(_config["serverLogChanels"])) as ITextChannel;

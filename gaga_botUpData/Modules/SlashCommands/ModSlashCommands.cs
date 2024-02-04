@@ -6,6 +6,7 @@ using System;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Configuration;
+using Discord.Net;
 
 namespace gaga_bot.Modules.SlashCommands
 {
@@ -444,6 +445,17 @@ namespace gaga_bot.Modules.SlashCommands
                 var messages = await Context.Channel.GetMessagesAsync(amount).FlattenAsync();
                 await ((ITextChannel)Context.Channel).DeleteMessagesAsync(messages);
                 await RespondAsync("Сообщения удалены", ephemeral: true);
+            }
+            catch (RateLimitedException ex)
+            {
+                // Получаем время ожидания из исключения
+                Console.WriteLine(ex.Message);
+
+                // Ожидаем указанное время и повторяем запрос
+                await Task.Delay(1800);
+                // Повторяем запрос здесь
+
+                await ClearChat(amount);
             }
             catch (Exception ex) 
             {

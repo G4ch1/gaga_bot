@@ -4,6 +4,8 @@ using Discord;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Discord.Net;
+using System.Diagnostics.Metrics;
 
 namespace gaga_bot.Modules.SlashCommands
 {
@@ -63,7 +65,8 @@ namespace gaga_bot.Modules.SlashCommands
                     //var chanel = Context.Channel as SocketMessage;
                     OverwritePermissions permissions = new OverwritePermissions(
                                                 connect: PermValue.Deny, // Разрешено подключаться к голосовому каналу
-                                                speak: PermValue.Allow // Разрешено говорить в голосовом канале
+                                                speak: PermValue.Allow, // Разрешено говорить в голосовом канале
+                                                useVoiceActivation: PermValue.Allow
                                             );
                     // Применяем изменения к каналу
                     await voiceChannel.AddPermissionOverwriteAsync(Context.Guild.EveryoneRole, permissions);
@@ -71,6 +74,17 @@ namespace gaga_bot.Modules.SlashCommands
                     await RespondAsync($"закрыл.", ephemeral: true);
                 }
 
+            }
+            catch (RateLimitedException ex)
+            {
+                // Получаем время ожидания из исключения
+                Console.WriteLine(ex.Message);
+
+                // Ожидаем указанное время и повторяем запрос
+                await Task.Delay(1800);
+                // Повторяем запрос здесь
+
+                await CloseVoiceChanels();
             }
             catch (Exception ex)
             {
@@ -103,13 +117,25 @@ namespace gaga_bot.Modules.SlashCommands
                     //var chanel = Context.Channel as SocketMessage;
                     OverwritePermissions permissions = new OverwritePermissions(
                                                 connect: PermValue.Allow, // Разрешено подключаться к голосовому каналу
-                                                speak: PermValue.Allow // Разрешено говорить в голосовом канале
+                                                speak: PermValue.Allow, // Разрешено говорить в голосовом канале
+                                                useVoiceActivation: PermValue.Allow
                                             );
                     // Применяем изменения к каналу
                     await voiceChannel.AddPermissionOverwriteAsync(Context.Guild.EveryoneRole, permissions);
 
                     await RespondAsync($"открыл.", ephemeral: true);
                 }
+            }
+            catch (RateLimitedException ex)
+            {
+                // Получаем время ожидания из исключения
+                Console.WriteLine(ex.Message);
+
+                // Ожидаем указанное время и повторяем запрос
+                await Task.Delay(1800);
+                // Повторяем запрос здесь
+
+                await OpenVoiceChanels();
             }
             catch (Exception ex)
             {
@@ -154,6 +180,17 @@ namespace gaga_bot.Modules.SlashCommands
                     await RespondAsync($"забрал.", ephemeral: true);
                 }
             }
+            catch (RateLimitedException ex)
+            {
+                // Получаем время ожидания из исключения
+                Console.WriteLine(ex.Message);
+
+                // Ожидаем указанное время и повторяем запрос
+                await Task.Delay(1800);
+                // Повторяем запрос здесь
+
+                await UserCloseVoiceChanels( in_user);
+            }
             catch (Exception ex)
             {
                 await RespondAsync($"Ты чо дурак блин 👉👈😳?", ephemeral: true);
@@ -189,13 +226,25 @@ namespace gaga_bot.Modules.SlashCommands
                     //var chanel = Context.Channel as SocketMessage;
                     OverwritePermissions permissions = new OverwritePermissions(
                                             connect: PermValue.Allow, // Разрешено подключаться к голосовому каналу
-                                            speak: PermValue.Allow // Разрешено говорить в голосовом канале
+                                            speak: PermValue.Allow, // Разрешено говорить в голосовом канале
+                                            useVoiceActivation: PermValue.Allow
                                         );
                     // Применяем изменения к каналу
                     await voiceChannel.AddPermissionOverwriteAsync(in_user, permissions);
 
                     await RespondAsync($"отдал.", ephemeral: true);
                 }
+            }
+            catch (RateLimitedException ex)
+            {
+                // Получаем время ожидания из исключения
+                Console.WriteLine(ex.Message);
+
+                // Ожидаем указанное время и повторяем запрос
+                await Task.Delay(1800);
+                // Повторяем запрос здесь
+
+                await UserOpenVoiceChanels(in_user);
             }
             catch (Exception ex)
             {

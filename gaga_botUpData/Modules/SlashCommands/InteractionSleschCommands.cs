@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using System.Drawing;
 using System.Linq;
 using static gaga_bot.Modules.SlashCommands.TestSleshComand;
+using Discord.Net;
 
 namespace gaga_bot.Modules.SlashCommands
 {
@@ -189,6 +190,17 @@ namespace gaga_bot.Modules.SlashCommands
                             .WithButton(button2);
 
                         await RespondAsync(null, embed: EmbedBuilderLog.Build(), components: builder.Build(), ephemeral: true);
+                    }
+                    catch (RateLimitedException ex)
+                    {
+                        // Получаем время ожидания из исключения
+                        Console.WriteLine(ex.Message);
+
+                        // Ожидаем указанное время и повторяем запрос
+                        await Task.Delay(1800);
+                        // Повторяем запрос здесь
+
+                        await TakeGenderRoles();
                     }
                     catch (Exception ex) 
                     {
